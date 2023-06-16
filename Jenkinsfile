@@ -1,3 +1,4 @@
+String VERSION = ""
 pipeline {
   agent {
     kubernetes {
@@ -40,7 +41,7 @@ pipeline {
 
     stage('Checkmarx IaC Analysis') {
       steps {
-        container('node') {
+        container('checkmarx') {
           sh('/app/bin/kics scan -p ${WORKSPACE} --ci --report-formats html -o ${WORKSPACE} --ignore-on-exit results')
           archiveArtifacts(artifacts: 'results.html', fingerprint: true)
         }
@@ -55,16 +56,47 @@ pipeline {
       }
     }  
 
+    stage('Lint Code') {
+      steps {
+        container('node') {
+          sh "npm run lint"
+        }
+      }
+    }  
 
+    stage('Unit Test') {
+      steps {
+        container('node') {
+          sh "npm run test"
+        }
+      }
+    }  
 
+    stage('Build Image') {
+      steps {
+        container('docker') {
+            sh "apk add --no-cache jq"
+            env.VERSION = sh(returnStdout: true, script:"jq -r .version package.json")
+            VERSION = env.VERSION
+            sh "docker build gtnode:\${VERSION} ."
+        }
+      }
+    }  
 
+    stage('Publish Image') {
+      steps {
+        container('docker') {
+            withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                sh "docker login -u ${USER} -p ${PASS}"
+                sh "docker tag gtnode:\${VERSION} pruebagerentet/gtnode:\${VERSION}"
+                sh "docker push pruebagerentet/gtnode:\${VERSION}"
+            }
+        }
+      }
+    }  
+
+    
 
   }
-    post {
-      always {
-        container('docker') {
-          sh 'docker logout'
-      }
-      }
-    }
+
 }
