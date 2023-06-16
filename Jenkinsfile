@@ -75,10 +75,13 @@ pipeline {
     stage('Build Image') {
       steps {
         container('docker') {
-            sh "apk add --no-cache jq"
-            env.VERSION = sh(returnStdout: true, script:"jq -r .version package.json")
-            VERSION = env.VERSION
-            sh "docker build gtnode:\${VERSION} ."
+            script {
+                sh "apk add --no-cache jq"
+                env.VERSION = sh(returnStdout: true, script:"jq -r .version package.json")
+                VERSION = env.VERSION
+                sh "docker build gtnode:\${VERSION} ."
+            }
+
         }
       }
     }  
