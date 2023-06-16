@@ -79,7 +79,7 @@ pipeline {
                 sh "apk add --no-cache jq"
                 env.VERSION = sh(returnStdout: true, script:"jq -r .version package.json")
                 VERSION = env.VERSION
-                sh "docker build gtnode:\${VERSION} ."
+                sh "docker build -t gtnode:\${VERSION} ."
             }
 
         }
